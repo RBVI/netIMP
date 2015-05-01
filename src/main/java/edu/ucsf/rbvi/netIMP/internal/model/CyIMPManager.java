@@ -98,7 +98,6 @@ public class CyIMPManager {
 		int edgeCount = 0;
 		for (IMPModel model: impModels) {
 			Map<CyNode, CyNode> nodeMap = new HashMap<>();
-			System.out.println("Model number: "+model.getModelNumber());
 			CyNetwork modelNetwork = model.getNetwork();
 
 			// Copy over all of the nodes

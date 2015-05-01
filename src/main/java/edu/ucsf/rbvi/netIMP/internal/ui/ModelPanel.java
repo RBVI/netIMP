@@ -232,6 +232,10 @@ public class ModelPanel extends JPanel implements CytoPanelComponent {
 			for (CyNode node: network.getNodeList())
 				network.getRow(node).set(CyNetwork.SELECTED, false);
 
+			// Clear the current selection
+			for (CyEdge edge: network.getEdgeList())
+				network.getRow(edge).set(CyNetwork.SELECTED, false);
+
 			// Clear the pathway colors
 
 			for (int viewRow: rows) {
