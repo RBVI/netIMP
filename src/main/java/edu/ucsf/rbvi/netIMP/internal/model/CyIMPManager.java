@@ -46,6 +46,7 @@ public class CyIMPManager {
 	File modelFile = null;
 	List<IMPModel> impModels;
 	ModelPanel resultsPanel = null;
+	int maxModelCount = 0;
 
 	// A couple of useful services that we want to cache
 	CyApplicationManager cyAppManager = null;
@@ -115,8 +116,10 @@ public class CyIMPManager {
 				String name = modelNetwork.getRow(modelEdge).get(CyNetwork.NAME, String.class);
 				CyEdge unionEdge = CyModelUtils.getEdgeByName(union, name);
 				if (unionEdge != null) {
-					int count = union.getRow(unionEdge).get("ModelCount", Integer.class);
-					union.getRow(unionEdge).set("ModelCount", Integer.valueOf(count+1));
+					int count = union.getRow(unionEdge).get("ModelCount", Integer.class)+1;
+					if ((count) > maxModelCount)
+						maxModelCount = count;
+					union.getRow(unionEdge).set("ModelCount", Integer.valueOf(count));
 					continue;
 				}
 
@@ -148,6 +151,10 @@ public class CyIMPManager {
 
 	public int getModelCount() {
 		return impModels.size();
+	}
+
+	public int getMaxModelCount() {
+		return maxModelCount;
 	}
 
 	public void syncColors() {

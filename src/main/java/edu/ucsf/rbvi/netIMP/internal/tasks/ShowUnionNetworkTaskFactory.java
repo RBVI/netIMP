@@ -17,4 +17,9 @@ public class ShowUnionNetworkTaskFactory extends AbstractTaskFactory {
 		return new TaskIterator(new ShowUnionNetworkTask(manager));
 	}
 
+	public boolean isReady() {
+		if (manager.getModelCount() == 0) return false;
+
+		return true;
+	}
 }

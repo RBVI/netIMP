@@ -46,6 +46,10 @@ import org.cytoscape.model.CyEdge;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
 import org.cytoscape.view.model.CyNetworkView;
+import org.cytoscape.view.model.View;
+import static org.cytoscape.view.presentation.property.BasicVisualLexicon.*;
+import org.cytoscape.view.vizmap.VisualMappingManager;
+import org.cytoscape.view.vizmap.VisualStyle;
 import org.cytoscape.work.TaskMonitor;
 
 import edu.ucsf.rbvi.netIMP.internal.model.CyIMPManager;
@@ -224,10 +228,13 @@ public class ModelPanel extends JPanel implements CytoPanelComponent {
 			int[] rows = table.getSelectedRows(); // Get all of the selected rows
 			if (network == null)
 				network = cyIMPManager.getCurrentNetwork();
+			if (network == null) return;
 
 			if (networkView == null)
 				networkView = cyIMPManager.getCurrentNetworkView();
+			if (networkView == null) return;
 
+			/*
 			// Clear the current selection
 			for (CyNode node: network.getNodeList())
 				network.getRow(node).set(CyNetwork.SELECTED, false);
@@ -235,23 +242,31 @@ public class ModelPanel extends JPanel implements CytoPanelComponent {
 			// Clear the current selection
 			for (CyEdge edge: network.getEdgeList())
 				network.getRow(edge).set(CyNetwork.SELECTED, false);
+			*/
 
 			// Clear the pathway colors
+			VisualStyle style = cyIMPManager.getService(VisualMappingManager.class).getVisualStyle(networkView);
+			networkView.clearVisualProperties();
+			style.apply(networkView);
 
 			for (int viewRow: rows) {
 				int modelRow = table.convertRowIndexToModel(viewRow);
+				Color modelColor = ((IMPModel)table.getValueAt(modelRow,1)).getColor();
 
 				// Select the appropriate nodes in the network
 				for (CyNode node: tableModel.selectNodesFromRow(network, modelRow)) {
-					network.getRow(node).set(CyNetwork.SELECTED, true);
+					// network.getRow(node).set(CyNetwork.SELECTED, true);
+					View<CyNode> nodeView = networkView.getNodeView(node);
+					nodeView.setVisualProperty(NODE_BORDER_PAINT, modelColor);
+					nodeView.setVisualProperty(NODE_BORDER_WIDTH, 10.0);
 				}
 
 				// Select our edges
 				for (CyEdge edge: tableModel.selectEdgesFromRow(network, modelRow)) {
-					network.getRow(edge).set(CyNetwork.SELECTED, true);
+					View<CyEdge> edgeView = networkView.getEdgeView(edge);
+					edgeView.setVisualProperty(EDGE_STROKE_UNSELECTED_PAINT, modelColor);
+					// network.getRow(edge).set(CyNetwork.SELECTED, true);
 				}
-
-				// Style our edges
 			}
 
 			networkView.updateView();

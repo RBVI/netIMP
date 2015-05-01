@@ -18,6 +18,7 @@ import org.cytoscape.view.vizmap.VisualStyleFactory;
 import org.cytoscape.view.vizmap.mappings.BoundaryRangeValues;
 import org.cytoscape.view.vizmap.mappings.ContinuousMapping;
 import org.cytoscape.view.vizmap.mappings.DiscreteMapping;
+import org.cytoscape.view.vizmap.mappings.PassthroughMapping;
 
 import edu.ucsf.rbvi.netIMP.internal.model.CyIMPManager;
 
@@ -26,15 +27,28 @@ public class CyViewUtils {
 		VisualMappingManager vmManager = manager.getService(VisualMappingManager.class);
 		VisualStyleFactory vsFactory = manager.getService(VisualStyleFactory.class);
 
-		VisualStyle currentStyle = vmManager.getCurrentVisualStyle();
-		VisualStyle newStyle = vsFactory.createVisualStyle(currentStyle);
-		newStyle.setTitle(currentStyle.getTitle()+"-IMP");
+		VisualStyle newStyle = vsFactory.createVisualStyle("IMP Models");
 
 		VisualMappingFunctionFactory discreteMappingFactory = 
 						manager.getService(VisualMappingFunctionFactory.class, "(mapping.type=discrete)");
 
 		VisualMappingFunctionFactory continuousMappingFactory = 
 						manager.getService(VisualMappingFunctionFactory.class, "(mapping.type=continuous)");
+
+		VisualMappingFunctionFactory passthroughMappingFactory = 
+						manager.getService(VisualMappingFunctionFactory.class, "(mapping.type=passthrough)");
+
+		newStyle.setDefaultValue(NODE_WIDTH, 40.0);
+		newStyle.setDefaultValue(NODE_HEIGHT, 40.0);
+		newStyle.setDefaultValue(NODE_SIZE, 40.0);
+		newStyle.setDefaultValue(NODE_LABEL_COLOR, Color.BLACK);
+		newStyle.setDefaultValue(NODE_BORDER_WIDTH, 2.0);
+		newStyle.setDefaultValue(NODE_BORDER_PAINT, Color.BLACK);
+
+		// Passthrough mapping for the label
+		PassthroughMapping labelMapping = 
+					(PassthroughMapping) passthroughMappingFactory.createVisualMappingFunction("label", String.class, NODE_LABEL);
+		newStyle.addVisualMappingFunction(labelMapping);
 
 		// Discrete mapper for node shape
 		DiscreteMapping shapeMapping = 
@@ -45,11 +59,20 @@ public class CyViewUtils {
 
 		// Discrete mapper for node color
 		DiscreteMapping colorMapping = 
-					(DiscreteMapping) discreteMappingFactory.createVisualMappingFunction("node type", String.class, NODE_PAINT);
-		colorMapping.putMapValue("metabolite", Color.BLUE);
-		colorMapping.putMapValue("enzyme", Color.GREEN);
+					(DiscreteMapping) discreteMappingFactory.createVisualMappingFunction("node type", String.class, NODE_FILL_COLOR);
+		colorMapping.putMapValue("metabolite", Color.WHITE);
+		colorMapping.putMapValue("enzyme", new Color(153,255,153));
+		newStyle.addVisualMappingFunction(colorMapping);
 	
 		// Continuous mapper for edge thickness
-		return null;
+		int max = manager.getMaxModelCount();
+		ContinuousMapping edgeMapping =
+				(ContinuousMapping) continuousMappingFactory.createVisualMappingFunction("ModelCount", Integer.class, EDGE_WIDTH);
+		edgeMapping.addPoint(1, new BoundaryRangeValues(1, 1, 1));
+		edgeMapping.addPoint(max, new BoundaryRangeValues(20, 20, 20));
+		newStyle.addVisualMappingFunction(edgeMapping);
+		vmManager.addVisualStyle(newStyle);
+		vmManager.setCurrentVisualStyle(newStyle);
+		return newStyle;
 	}
 }
