@@ -3,6 +3,7 @@ package edu.ucsf.rbvi.netIMP.internal.model;
 import java.awt.Color;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,7 +18,7 @@ import org.cytoscape.model.CyNode;
 import org.cytoscape.model.CyTable;
 import org.cytoscape.model.SavePolicy;
 
-public class IMPModel {
+public class IMPModel implements Comparable<IMPModel> {
 	final CyIMPManager manager;
 	List<IMPNode> impNodes;
 	List<IMPEdge> impEdges;
@@ -82,6 +83,12 @@ public class IMPModel {
 	}
 
 	public Map <String, Double> getScores() { return impScores; }
+	public Double getScore(String score) { 
+		if (impScores.containsKey(score))
+			return impScores.get(score);
+		return null; 
+	}
+
 	public List <IMPNode> getNodes() { return impNodes; }
 	public List <IMPEdge> getEdges() { return impEdges; }
 	public List <IMPRestraint> getRestraints() { return impRestraints; }
@@ -132,6 +139,15 @@ public class IMPModel {
 		for (IMPRestraint iRestraint: impRestraints) {
 		}
 		return network;
+	}
+
+	@Override
+	public int compareTo(IMPModel m2) {
+		if (m2 == null) return -1;
+
+		Double d1 = getScore("score");
+		Double d2 = m2.getScore("score");
+		return Double.compare(d2, d1);
 	}
 
 	private Class getObjectType(Object attrValue) {

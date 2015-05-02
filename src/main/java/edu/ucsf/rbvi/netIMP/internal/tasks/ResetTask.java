@@ -12,48 +12,41 @@ import org.cytoscape.work.Tunable;
 import org.cytoscape.work.util.ListSingleSelection;
 
 import edu.ucsf.rbvi.netIMP.internal.model.CyIMPManager;
+import edu.ucsf.rbvi.netIMP.internal.model.CyModelUtils;
 
-public class LoadIMPModelsTask extends AbstractTask {
+public class ResetTask extends AbstractTask {
 	final CyIMPManager impManager;
-
-	@Tunable(description="File containing IMP models", params="input=true")
-	public File impFile;
 
 	/**
 	 * Constructor for loading CDD Domain from the CDD website.
 	 * @param net CyNetwork to load the domain.
 	 * @param manager The CDD Domain manager
 	 */
-	public LoadIMPModelsTask(CyIMPManager manager) {
+	public ResetTask(CyIMPManager manager) {
 		super();
 		this.impManager = manager;
 	}
 
 	@ProvidesTitle
-	public String getTitle() { return "Load IMP Models"; }
+	public String getTitle() { return "Reset"; }
 	
 	@Override
 	public void run(TaskMonitor monitor) throws Exception {
-		monitor.setTitle("Load IMP Models");
+		monitor.setTitle("Resetting");
+
+		monitor.setStatusMessage("Hiding results panel");
+		SynchronousTaskManager tm = 
+					(SynchronousTaskManager)impManager.getService(SynchronousTaskManager.class);
+		TaskIterator ti = new TaskIterator(new ShowIMPResultsPanelTask(impManager, false));
+		tm.execute(ti);
+
+		// Remove the network
+		monitor.setStatusMessage("Deleting network");
+		impManager.deleteUnionNetwork();
 
 		if (impManager.getModelCount() > 0) {
 			monitor.setStatusMessage("Clearing previous IMP model load");
+			impManager.reset();
 		}
-
-		// Load the models
-		int models = impManager.loadIMPModels(impFile);
-		monitor.setStatusMessage("Loaded "+models+" IMP models");
-
-		SynchronousTaskManager tm = (SynchronousTaskManager)impManager.getService(SynchronousTaskManager.class);
-
-		// Show the results panel
-		TaskIterator ti = new TaskIterator(new ShowIMPResultsPanelTask(impManager, true));
-		tm.execute(ti);
-		impManager.getResultsPanel().updateData();
-
-		// Show the Union Network
-		ti = new TaskIterator(new ShowUnionNetworkTask(impManager));
-		tm.execute(ti);
-
 	}
 }

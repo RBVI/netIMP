@@ -40,7 +40,6 @@ public class ModelBrowserTableModel extends DefaultTableModel {
 	private final ModelPanel networkBrowser;
 	private Object[][] data;
 	private List<CyNetwork> modelNetworks;
-	private Map<CyNetwork, IMPModel> modelMap;
 	private List<Color> componentColors;
 	// private final String[] columnNames = { "Model", "Scores", "Show" };
 	private final String[] columnNames = { "Model", "Scores" };
@@ -68,38 +67,30 @@ public class ModelBrowserTableModel extends DefaultTableModel {
 
 		// Now handle all of our component networks
 		List<IMPModel> impModels = cyIMPManager.getIMPModels(cutoff);
-		List<CyNetwork> modelNetworks = new ArrayList<>();
-		modelMap = new HashMap<>();
+		Collections.sort(impModels);
 
-		for (IMPModel model: impModels) {
-			CyNetwork net = model.getNetwork();
-			modelMap.put(net, model);
-			modelNetworks.add(net);
-		}
-			
-		Collections.sort(modelNetworks, new NetworkSorter());
-		componentColors = generateColors(modelNetworks.size());
+		componentColors = generateColors(impModels.size());
 
-		this.data = new Object[modelNetworks.size()][columnNames.length];
+		this.data = new Object[impModels.size()][columnNames.length];
 
-		for (int i = 0; i < modelNetworks.size(); i++) {
+		for (int i = 0; i < impModels.size(); i++) {
+			IMPModel model = impModels.get(i);
 			// Default grey
 			Color color = new Color(192,192,192,128);
-			CyNetwork modelNetwork = modelNetworks.get(i);
-			IMPModel model = modelMap.get(modelNetwork);
+			CyNetwork modelNetwork = model.getNetwork();
 			if (modelNetwork.getNodeCount() > 2)
 				model.setColor(componentColors.get(i));
+			else
+				model.setColor(color);
 
 			setValueAt(modelNetwork, i, 0);
 			setValueAt(model, i, 1);
-			// setValueAt(model, i, 2);
 		}
 		setDataVector(this.data, columnNames);
 		fireTableDataChanged();
 		if (networkView != null)
 			networkView.updateView();
 		networkBrowser.updateTable();
-		cyIMPManager.syncColors();
 	}
 
 	@Override
@@ -264,7 +255,6 @@ public class ModelBrowserTableModel extends DefaultTableModel {
 						{0,153,255,255}, // Light blue
 						{255,102,153,255}, // Light red
 						{0,255,153,255}, // Light green
-
 			};
 		List<Color> colors = new ArrayList<>();
 		for (int i = 0; i < number; i++) {
@@ -276,20 +266,5 @@ public class ModelBrowserTableModel extends DefaultTableModel {
 		}
 		return colors;
 	}
-
-	private class NetworkSorter implements Comparator<CyNetwork> {
-		public NetworkSorter() { }
-
-		public int compare(CyNetwork n1, CyNetwork n2) {
-			if (n1 == null && n2 == null) return 0;
-			if (n1 == null && n2 != null) return -1;
-			if (n2 == null && n1 != null) return 1;
-
-			if(n1.getNodeCount() < n2.getNodeCount()) return 1;
-			if(n1.getNodeCount() > n2.getNodeCount()) return -1;
-			return 0;
-		}
-	}
-
 
 }

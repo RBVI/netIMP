@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 
 import edu.ucsf.rbvi.netIMP.internal.model.CyIMPManager;
 import edu.ucsf.rbvi.netIMP.internal.tasks.LoadIMPModelsTaskFactory;
+import edu.ucsf.rbvi.netIMP.internal.tasks.ResetTaskFactory;
 import edu.ucsf.rbvi.netIMP.internal.tasks.ShowIMPResultsPanelTaskFactory;
 import edu.ucsf.rbvi.netIMP.internal.tasks.ShowUnionNetworkTaskFactory;
 
@@ -101,6 +102,16 @@ public class CyActivator extends AbstractCyActivator {
 				associateProps.setProperty(PREFERRED_MENU, "Apps.NetIMP");
 				associateProps.setProperty(TITLE, "Associate results with network");
 				associateProps.setProperty(MENU_GRAVITY, "6.0");
+			}
+			
+			{
+				ResetTaskFactory reset = 
+					new ResetTaskFactory(impManager);
+				Properties resetProps = new Properties();
+				resetProps.setProperty(PREFERRED_MENU, "Apps.NetIMP");
+				resetProps.setProperty(TITLE, "Reset");
+				resetProps.setProperty(MENU_GRAVITY, "10.0");
+				registerService(bc, reset, TaskFactory.class, resetProps);
 			}
 
 		} catch (Exception e) {

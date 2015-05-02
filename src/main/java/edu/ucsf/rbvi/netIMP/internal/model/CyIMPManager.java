@@ -35,6 +35,7 @@ import org.cytoscape.work.TaskIterator;
 import org.cytoscape.work.TaskObserver;
 
 import edu.ucsf.rbvi.netIMP.internal.ui.ModelPanel;
+import edu.ucsf.rbvi.netIMP.internal.ui.CyViewUtils;
 
 public class CyIMPManager {
 
@@ -47,6 +48,7 @@ public class CyIMPManager {
 	List<IMPModel> impModels;
 	ModelPanel resultsPanel = null;
 	int maxModelCount = 0;
+	CyNetwork unionNetwork = null;
 
 	// A couple of useful services that we want to cache
 	CyApplicationManager cyAppManager = null;
@@ -54,6 +56,12 @@ public class CyIMPManager {
 	public CyIMPManager(CyServiceRegistrar registrar) {
 		this.serviceRegistrar = registrar;
 		impModels = new ArrayList<>();
+	}
+
+	public void reset() {
+		impModels = new ArrayList<>();
+		unionNetwork = null;
+		resultsPanel = null;
 	}
 
 	public int loadIMPModels(File modelFile) throws IOException, FileNotFoundException {
@@ -90,8 +98,7 @@ public class CyIMPManager {
 	}
 
 	public CyNetwork buildUnionNetwork() {
-		CyNetworkFactory networkFactory = (CyNetworkFactory)getService(CyNetworkFactory.class);
-		CyNetwork union = networkFactory.createNetwork(SavePolicy.DO_NOT_SAVE);
+		unionNetwork = networkFactory.createNetwork(SavePolicy.DO_NOT_SAVE);
 
 		// For each model, get the network and those nodes and edges to
 		// our union network.  If an edge already exists, increment the edge
@@ -104,9 +111,9 @@ public class CyIMPManager {
 			// Copy over all of the nodes
 			for (CyNode modelNode: modelNetwork.getNodeList()) {
 				String name = modelNetwork.getRow(modelNode).get(CyNetwork.NAME, String.class);
-				CyNode unionNode = CyModelUtils.getNodeByName(union, name);
+				CyNode unionNode = CyModelUtils.getNodeByName(unionNetwork, name);
 				if (unionNode == null) {
-					unionNode = CyModelUtils.copyNode(modelNetwork, modelNode, union);
+					unionNode = CyModelUtils.copyNode(modelNetwork, modelNode, unionNetwork);
 				}
 				nodeMap.put(modelNode, unionNode);
 			}
@@ -114,12 +121,12 @@ public class CyIMPManager {
 			// Copy over all of the edges
 			for (CyEdge modelEdge: modelNetwork.getEdgeList()) {
 				String name = modelNetwork.getRow(modelEdge).get(CyNetwork.NAME, String.class);
-				CyEdge unionEdge = CyModelUtils.getEdgeByName(union, name);
+				CyEdge unionEdge = CyModelUtils.getEdgeByName(unionNetwork, name);
 				if (unionEdge != null) {
-					int count = union.getRow(unionEdge).get("ModelCount", Integer.class)+1;
+					int count = unionNetwork.getRow(unionEdge).get("ModelCount", Integer.class)+1;
 					if ((count) > maxModelCount)
 						maxModelCount = count;
-					union.getRow(unionEdge).set("ModelCount", Integer.valueOf(count));
+					unionNetwork.getRow(unionEdge).set("ModelCount", Integer.valueOf(count));
 					continue;
 				}
 
@@ -131,14 +138,49 @@ public class CyIMPManager {
 				CyNode source = nodeMap.get(modelEdge.getSource());
 				CyNode target = nodeMap.get(modelEdge.getTarget());
 
-				CyEdge newEdge = CyModelUtils.copyEdge(modelNetwork, modelEdge, source, target, false, union);
-				CyModelUtils.createColumnIfNecessary(union.getDefaultEdgeTable(), "ModelCount", Integer.class, null);
-				union.getRow(newEdge).set("ModelCount", Integer.valueOf(1));
+				CyEdge newEdge = 
+							CyModelUtils.copyEdge(modelNetwork, modelEdge, source, target, false, unionNetwork);
+				CyModelUtils.createColumnIfNecessary(unionNetwork.getDefaultEdgeTable(), 
+				                                     "ModelCount", Integer.class, null);
+				unionNetwork.getRow(newEdge).set("ModelCount", Integer.valueOf(1));
 				edgeCount++;
 			}
 		}
 		System.out.println("Created: "+edgeCount+" edges");
-		return union;
+		return unionNetwork;
+	}
+
+	public void updateUnionNetwork(double cutoff) {
+		if (unionNetwork == null) return;
+
+		Map<CyEdge, Integer> edgeMap = new HashMap<>();
+		for (IMPModel model: getIMPModels(cutoff)) {
+			CyNetwork modelNetwork = model.getNetwork();
+			for (CyEdge modelEdge: modelNetwork.getEdgeList()) {
+				String name = modelNetwork.getRow(modelEdge).get(CyNetwork.NAME, String.class);
+				CyEdge unionEdge = CyModelUtils.getEdgeByName(unionNetwork, name);
+				if (!edgeMap.containsKey(unionEdge))
+					edgeMap.put(unionEdge,1);
+				else
+					edgeMap.put(unionEdge,edgeMap.get(unionEdge)+1);
+			}
+		}
+		for (CyEdge edge: unionNetwork.getEdgeList()) {
+			if (edgeMap.containsKey(edge)) {
+				unionNetwork.getRow(edge).set("ModelCount", edgeMap.get(edge));
+				CyViewUtils.showEdge(this, unionNetwork, edge, true);
+			} else {
+				CyViewUtils.showEdge(this, unionNetwork, edge, false);
+			}
+		}
+	}
+
+	public void deleteUnionNetwork() {
+		if (networkManager == null)
+			networkManager = (CyNetworkManager)getService(CyNetworkManager.class);
+
+		if (unionNetwork != null)
+			networkManager.destroyNetwork(unionNetwork);
 	}
 
 	public List<IMPModel> getIMPModels() {
@@ -146,7 +188,20 @@ public class CyIMPManager {
 	}
 
 	public List<IMPModel> getIMPModels(double cutoff) {
-		return impModels;
+		List<IMPModel> models = new ArrayList<>();
+		for (IMPModel model: impModels) {
+			if (model.getScore("score") >= cutoff)
+				models.add(model);
+		}
+		return models;
+	}
+
+	public List<Double> getModelScores() {
+		List<Double> scores = new ArrayList<>();
+		for (IMPModel model: impModels) {
+			scores.add(model.getScore("score"));
+		}
+		return scores;
 	}
 
 	public int getModelCount() {

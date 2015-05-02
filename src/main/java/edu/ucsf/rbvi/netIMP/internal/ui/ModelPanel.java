@@ -6,18 +6,23 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Image;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.text.DecimalFormat;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Dictionary;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
 
 import javax.swing.BorderFactory;
 import javax.swing.Icon;
 import javax.swing.JComponent;
+import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -63,6 +68,8 @@ public class ModelPanel extends JPanel implements CytoPanelComponent {
 	private ModelBrowser modelBrowser;
 	private CyEventHelper eventHelper;
 
+	private Map<IMPModel, RestraintListener> listenerMap;
+
   // table size parameters
 	private static final int graphPicSize = 80;
 	private static final int defaultRowHeight = graphPicSize + 8;
@@ -83,7 +90,7 @@ public class ModelPanel extends JPanel implements CytoPanelComponent {
 		add(modelBrowser, BorderLayout.CENTER);
 		this.setSize(this.getMinimumSize());
 		eventHelper = (CyEventHelper)cyIMPManager.getService(CyEventHelper.class);
-
+		listenerMap = new HashMap<>();
 	}
 
 	public Component getComponent() {
@@ -119,7 +126,13 @@ public class ModelPanel extends JPanel implements CytoPanelComponent {
 			modelBrowser.updateData();
 	}
 
-	public class ModelBrowser extends JPanel implements ListSelectionListener {
+	public ItemListener getItemListener(IMPModel model) {
+		if (!listenerMap.containsKey(model))
+			listenerMap.put(model, new RestraintListener(this, model));
+		return listenerMap.get(model);
+	}
+
+	public class ModelBrowser extends JPanel implements ListSelectionListener, ChangeListener {
 		private ModelBrowserTableModel tableModel;
 		private	NetworkImageRenderer netImageRenderer;
 		private	ModelRenderer modelRenderer;
@@ -144,23 +157,25 @@ public class ModelPanel extends JPanel implements CytoPanelComponent {
 
 			setLayout(new BorderLayout());
 
-/*
-			// TODO
-			scores = new ArrayList<Double>(cyIMPManager.getModelScores());
+			// Add a slider for the score cutoff
+			scores = cyIMPManager.getModelScores();
 			Collections.sort(scores);
-			minScore = (int)(scores.get(0)*100.0);
-			maxScore = (int)(scores.get(scores.size()-1)*100.0);
-			scoreCutOff = scores.get(0);
+			// minScore = (int)(scores.get(0)*100.0);
+			// maxScore = (int)(scores.get(scores.size()-1)*100.0);
+			
+			minScore = (int)(scores.get(0)-0.5);
+			maxScore = (int)(scores.get(scores.size()-1)+0.5);
+			scoreCutOff = (double)minScore;
 
 			// Only create the slider panel if we have more than one
-			// stress value
+			// score
 			if (minScore < maxScore) {
 				JPanel sliderPanel = new JPanel(new BorderLayout());
 				JLabel sliderLabel = new JLabel("Score Cutoff");
 				sliderPanel.add(sliderLabel, BorderLayout.WEST);
 
-				slider = new JSlider(minScore, maxScore, (int)(score*100.0));
-				slider.setLabelTable(generateLabels(stresses));
+				slider = new JSlider(minScore*100, maxScore*100, (int)(scoreCutOff)*100);
+				slider.setLabelTable(generateLabels(minScore, maxScore));
 				slider.setPaintLabels(true);
 				slider.addChangeListener(this);
 				sliderPanel.add(slider, BorderLayout.CENTER);
@@ -172,29 +187,23 @@ public class ModelPanel extends JPanel implements CytoPanelComponent {
 				sliderPanel.setBorder(compound);
 				add(sliderPanel, BorderLayout.NORTH);
 			}
-*/
 
 			// Create a new JPanel for the table
 			JPanel tablePanel = new JPanel(new BorderLayout());
-			// String stressLabel = formatter.format(scoreCutOff);
-			// tableLabel = new JLabel("IMP Results");
-			// tablePanel.add(tableLabel, BorderLayout.NORTH);
+			String cutoffLabel = formatter.format(scoreCutOff);
+			tableLabel = new JLabel("<html><h3>&nbsp;&nbsp;Model Results with scores better than "+
+			                   cutoffLabel+"</h3></html>");
+			tablePanel.add(tableLabel, BorderLayout.NORTH);
 
 			tableModel = new ModelBrowserTableModel(cyIMPManager, cyIMPManager.getCurrentNetworkView(), 
 			                                        modelPanel, scoreCutOff);
 			table = new JTable(tableModel);
 
 			table.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-			table.setAutoCreateRowSorter(true);
 			table.setAutoCreateColumnsFromModel(true);
 			table.setIntercellSpacing(new Dimension(0, 4)); // gives a little vertical room between clusters
 			table.setFocusable(false); // removes an outline that appears when the user clicks on the images
 			table.setRowHeight(defaultRowHeight);
-
-			TableRowSorter rowSorter = new TableRowSorter(tableModel);
-			rowSorter.setComparator(0, new NetworkSorter());
-			rowSorter.setSortable(1, false);
-			table.setRowSorter(rowSorter);
 
 			// Make the headers centered
 			JTableHeader tableHeader = table.getTableHeader();
@@ -204,13 +213,20 @@ public class ModelPanel extends JPanel implements CytoPanelComponent {
 			netImageRenderer = new NetworkImageRenderer(cyIMPManager, graphPicSize);
 			table.setDefaultRenderer(CyNetwork.class, netImageRenderer);
 
-			// Used for both column 1 and column 2!
 			modelRenderer = new ModelRenderer(cyIMPManager);
 			table.setDefaultRenderer(IMPModel.class, modelRenderer);
+	
+			table.setDefaultEditor(IMPModel.class, modelRenderer);
 
 			// Ask to be notified of selection changes.
 			ListSelectionModel rowSM = table.getSelectionModel();
 			rowSM.addListSelectionListener(this);
+
+			TableRowSorter<ModelBrowserTableModel> rowSorter = new TableRowSorter<>(tableModel);
+			table.setRowSorter(rowSorter);
+			rowSorter.setSortable(0, false);
+			rowSorter.setSortable(1, true);
+			table.setAutoCreateRowSorter(true);
 
 			tableScrollPane = new JScrollPane(table);
 			//System.out.println("CBP: after creating JScrollPane");
@@ -234,16 +250,6 @@ public class ModelPanel extends JPanel implements CytoPanelComponent {
 				networkView = cyIMPManager.getCurrentNetworkView();
 			if (networkView == null) return;
 
-			/*
-			// Clear the current selection
-			for (CyNode node: network.getNodeList())
-				network.getRow(node).set(CyNetwork.SELECTED, false);
-
-			// Clear the current selection
-			for (CyEdge edge: network.getEdgeList())
-				network.getRow(edge).set(CyNetwork.SELECTED, false);
-			*/
-
 			// Clear the pathway colors
 			VisualStyle style = cyIMPManager.getService(VisualMappingManager.class).getVisualStyle(networkView);
 			networkView.clearVisualProperties();
@@ -253,44 +259,27 @@ public class ModelPanel extends JPanel implements CytoPanelComponent {
 				int modelRow = table.convertRowIndexToModel(viewRow);
 				Color modelColor = ((IMPModel)table.getValueAt(modelRow,1)).getColor();
 
-				// Select the appropriate nodes in the network
+				// Style the appropriate nodes in the network
 				for (CyNode node: tableModel.selectNodesFromRow(network, modelRow)) {
-					// network.getRow(node).set(CyNetwork.SELECTED, true);
 					View<CyNode> nodeView = networkView.getNodeView(node);
 					nodeView.setVisualProperty(NODE_BORDER_PAINT, modelColor);
 					nodeView.setVisualProperty(NODE_BORDER_WIDTH, 10.0);
 				}
 
-				// Select our edges
+				// Style our edges
 				for (CyEdge edge: tableModel.selectEdgesFromRow(network, modelRow)) {
 					View<CyEdge> edgeView = networkView.getEdgeView(edge);
 					edgeView.setVisualProperty(EDGE_STROKE_UNSELECTED_PAINT, modelColor);
-					// network.getRow(edge).set(CyNetwork.SELECTED, true);
 				}
 			}
 
 			networkView.updateView();
 		}
 
-/*
 		public void stateChanged(ChangeEvent e) {
 			if (e.getSource() != slider) return;
 			int cutoff = slider.getValue();
-			double dCutOff = ((double)cutoff)/100.0;
-			for (int i = 0; i < scores.size(); i++) {
-				double v = scores.get(i);
-				if (dCutoff > v) continue;
-				if (dCutoff == v) break;
-				double vLow = scores.get(i-1);
-				if ((dCutoff - vLow) < (v - dCutoff)) {
-					dCutoff = vLow;
-					break;
-				} else {
-					dCutoff = v;
-					break;
-				}
-			}
-			scoreCutOff = dCutoff;
+			scoreCutOff = ((double)cutoff)/100.0;
 
 			String cutoffLabel = formatter.format(scoreCutOff);
 			tableLabel.setText("<html><h3>&nbsp;&nbsp;Model Results with scores better than "+
@@ -300,11 +289,13 @@ public class ModelPanel extends JPanel implements CytoPanelComponent {
 			// tableModel.updateData(scoreCutOff);
 
 			tableModel = new ModelBrowserTableModel(cyIMPManager, cyIMPManager.getCurrentNetworkView(), 
-			                                          modelPanel, scoreCutOff);
+			                                        modelPanel, scoreCutOff);
 			table.setModel(tableModel);
+
+			// If we're showing the union network, update it
+			cyIMPManager.updateUnionNetwork(scoreCutOff);
 			updateTable();
 		}
-*/
 
 		public JTable getTable() { return table; }
 
@@ -313,19 +304,21 @@ public class ModelPanel extends JPanel implements CytoPanelComponent {
 			tableModel.fireTableStructureChanged();
 			tableScrollPane.getViewport().revalidate();
 			table.doLayout();
-			((TableRowSorter)table.getRowSorter()).sort();
+			// ((TableRowSorter)table.getRowSorter()).sort();
 		}
 
 		public void updateData() {
 			tableModel.updateData(scoreCutOff);
 		}
 
-		public Dictionary<Integer, JComponent> generateLabels(List<Double> models) {
+		public Dictionary<Integer, JComponent> generateLabels(int minScore, int maxScore) {
 			Dictionary<Integer, JComponent> table = new Hashtable<>();
-			for (Double score: scores) {
-				int value = (int)(score.doubleValue()*100.0+0.5);
-				if (value%5 != 0) continue;
-				String label = formatter.format(score);
+			int range = (maxScore-minScore)*100;
+			int increment = range/10;
+			for (int i = 0; i < 11; i++) {
+				int value = ((minScore*100)+(i*increment));
+				String label = formatter.format(((double)value)/100.0);
+				System.out.println("value: "+value+" label: "+label);
 				JLabel jLabel = new JLabel(label); // May have to use a text formatter
 				jLabel.setFont(new Font("SansSerif", Font.BOLD, 8));
 				table.put(value, jLabel);
@@ -334,17 +327,19 @@ public class ModelPanel extends JPanel implements CytoPanelComponent {
 		}
 	}
 
-	private class NetworkSorter implements Comparator<CyNetwork> {
-		public NetworkSorter() { }
+	private class RestraintListener implements ItemListener {
+		IMPModel model;
+		ModelPanel panel;
 
-		public int compare(CyNetwork n1, CyNetwork n2) {
-			if (n1 == null && n2 == null) return 0;
-			if (n1 == null && n2 != null) return -1;
-			if (n2 == null && n1 != null) return 1;
+		public RestraintListener(ModelPanel panel, IMPModel model) {
+			this.model = model;
+			this.panel = panel;
+		}
 
-			if(n1.getNodeCount() < n2.getNodeCount()) return 1;
-			if(n1.getNodeCount() > n2.getNodeCount()) return -1;
-			return 0;
+		public void itemStateChanged(ItemEvent e) {
+			JCheckBox cb = (JCheckBox)e.getSource();
+			String restraint = cb.getActionCommand();
+			System.out.println("Add restraint edges for "+restraint+" on model "+model.getModelNumber());
 		}
 	}
 }

@@ -7,6 +7,10 @@ import org.cytoscape.model.CyEdge;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
 import org.cytoscape.model.CyTable;
+import org.cytoscape.model.CyTable;
+import org.cytoscape.view.model.CyNetworkView;
+import org.cytoscape.view.model.CyNetworkViewManager;
+import org.cytoscape.view.model.View;
 import org.cytoscape.view.presentation.property.BasicVisualLexicon;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.*;
 import org.cytoscape.view.presentation.property.NodeShapeVisualProperty;
@@ -26,6 +30,11 @@ public class CyViewUtils {
 	public static VisualStyle createVisualStyle(CyIMPManager manager) {
 		VisualMappingManager vmManager = manager.getService(VisualMappingManager.class);
 		VisualStyleFactory vsFactory = manager.getService(VisualStyleFactory.class);
+
+		for (VisualStyle style: vmManager.getAllVisualStyles()) {
+			if ("IMP Models".equals(style.getTitle()))
+				return style;
+		}
 
 		VisualStyle newStyle = vsFactory.createVisualStyle("IMP Models");
 
@@ -74,5 +83,19 @@ public class CyViewUtils {
 		vmManager.addVisualStyle(newStyle);
 		vmManager.setCurrentVisualStyle(newStyle);
 		return newStyle;
+	}
+
+	public static void showEdge(CyIMPManager manager, CyNetwork network, CyEdge edge, boolean show) {
+		CyNetworkViewManager viewManager = 
+					(CyNetworkViewManager)manager.getService(CyNetworkViewManager.class);
+		for (CyNetworkView view: viewManager.getNetworkViews(network)) {
+			View<CyEdge> edgeView = view.getEdgeView(edge);
+			if (show) {
+				edgeView.clearValueLock(EDGE_VISIBLE);
+			} else {
+				edgeView.setLockedValue(EDGE_VISIBLE, show);
+			}
+			view.updateView();
+		}
 	}
 }
