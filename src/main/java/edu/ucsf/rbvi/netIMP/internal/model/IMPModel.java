@@ -182,6 +182,17 @@ public class IMPModel implements Comparable<IMPModel> {
 		return restraintEdges;
 	}
 
+	public boolean isSatisfied(CyEdge edge) {
+		IMPRestraint restraint = restraintMap.get(edge);
+		if (restraint.getType().equals("chemical transformation") &&
+		    restraint.getScore() < 21.00196)
+			return false;
+		if (restraint.getScore() < 0.0)
+			return false;
+
+		return true;
+	}
+
 	public void removeRestraints(CyNetwork network) {
 		for (CyEdge edge: network.getEdgeList()) {
 			if (network.getRow(edge).get("isRestraint", Boolean.class)) {

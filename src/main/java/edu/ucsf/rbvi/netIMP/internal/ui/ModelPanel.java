@@ -52,7 +52,12 @@ import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
 import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.view.model.View;
+import org.cytoscape.view.model.VisualLexicon;
+import org.cytoscape.view.model.VisualProperty;
+import org.cytoscape.view.presentation.RenderingEngine;
+import org.cytoscape.view.presentation.RenderingEngineManager;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.*;
+import org.cytoscape.view.presentation.property.values.LineType;
 import org.cytoscape.view.vizmap.VisualMappingManager;
 import org.cytoscape.view.vizmap.VisualStyle;
 import org.cytoscape.work.TaskMonitor;
@@ -241,7 +246,7 @@ public class ModelPanel extends JPanel implements CytoPanelComponent {
 
 		public void valueChanged(ListSelectionEvent e) {
 			if (e.getValueIsAdjusting()) return;
-			int[] rows = table.getSelectedRows(); // Get all of the selected rows
+			// int[] rows = table.getSelectedRows(); // Get all of the selected rows
 			if (network == null)
 				network = cyIMPManager.getCurrentNetwork();
 			if (network == null) return;
@@ -255,11 +260,16 @@ public class ModelPanel extends JPanel implements CytoPanelComponent {
 			networkView.clearVisualProperties();
 			style.apply(networkView);
 
-			// Hide the restraint edges
-
-			for (int viewRow: rows) {
+			for (int viewRow = 0; viewRow < tableModel.getRowCount(); viewRow++) {
 				int modelRow = table.convertRowIndexToModel(viewRow);
-				Color modelColor = ((IMPModel)table.getValueAt(modelRow,1)).getColor();
+				// System.out.println("ViewRow = "+viewRow+" modelRow = "+modelRow);
+				if (!table.isRowSelected(viewRow)) {
+					// Hide the restraint edges
+					continue;
+				}
+
+				int modelColumn = table.convertColumnIndexToModel(1);
+				Color modelColor = ((IMPModel)table.getValueAt(modelRow,modelColumn)).getColor();
 
 				// Style the appropriate nodes in the network
 				for (CyNode node: tableModel.selectNodesFromRow(network, modelRow)) {
@@ -331,17 +341,43 @@ public class ModelPanel extends JPanel implements CytoPanelComponent {
 	private class RestraintListener implements ItemListener {
 		IMPModel model;
 		ModelPanel panel;
+		VisualLexicon lexicon = null;
 
 		public RestraintListener(ModelPanel panel, IMPModel model) {
 			this.model = model;
 			this.panel = panel;
+			if (networkView != null) {
+				getVisualLexicon();
+				/*
+				String rendererID = networkView.getRendererId();
+				RenderingEngineManager rem = cyIMPManager.getService(RenderingEngineManager.class);
+				for (RenderingEngine<?> re: rem.getRenderingEngines(networkView)) {
+					if (re.getRendererId().equals(rendererID)) {
+						lexicon = re.getVisualLexicon();
+						break;
+					}
+				}
+				*/
+			}
+		}
+
+		public void getVisualLexicon() {
+			RenderingEngineManager rem = cyIMPManager.getService(RenderingEngineManager.class);
+			for (RenderingEngine<?> re: rem.getRenderingEngines(networkView)) {
+				lexicon = re.getVisualLexicon();
+				if (lexicon == null)
+					System.out.println("Visual Lexicon for "+networkView+" and "+re+" is null!");
+				return;
+			}
 		}
 
 		public void itemStateChanged(ItemEvent e) {
 			JCheckBox cb = (JCheckBox)e.getItemSelectable();
 			String restraint = cb.getActionCommand();
 			Color modelColor = model.getColor();
-			System.out.println("Add restraint edges for "+restraint+" on model "+model.getModelNumber());
+			if (lexicon == null) getVisualLexicon();
+			VisualProperty<?> ltVp = lexicon.lookup(CyEdge.class, "EDGE_LINE_TYPE");
+			// System.out.println("Add restraint edges for "+restraint+" on model "+model.getModelNumber());
 			// Unchecked?
 			if (e.getStateChange() == ItemEvent.DESELECTED) {
 				// Hide edges
@@ -352,12 +388,18 @@ public class ModelPanel extends JPanel implements CytoPanelComponent {
 				// Show edges
 				List<CyEdge> edges = model.getRestraintEdges(restraint);
 				for (CyEdge edge: edges) {
+					boolean isSatisfied = model.isSatisfied(edge);
 					CyViewUtils.showEdge(cyIMPManager, network, edge, true);
 					// Style it
-					View<CyEdge> edgeView = networkView.getEdgeView(edge);
-					edgeView.setVisualProperty(EDGE_STROKE_UNSELECTED_PAINT, modelColor);
-					// Change the line style depending on whether this restraint is met
-					// or violated
+					if (networkView != null) {
+						View<CyEdge> edgeView = networkView.getEdgeView(edge);
+						edgeView.setVisualProperty(EDGE_STROKE_UNSELECTED_PAINT, modelColor);
+						if (isSatisfied) {
+							CyViewUtils.setLineType(edgeView, ltVp, "Contiguous Arrow");
+						} else {
+							CyViewUtils.setLineType(edgeView, ltVp, "Vertical Slash");
+						}
+					}
 				}
 			}
 		}

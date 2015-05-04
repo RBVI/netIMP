@@ -10,11 +10,14 @@ import org.cytoscape.model.CyTable;
 import org.cytoscape.model.CyTable;
 import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.view.model.CyNetworkViewManager;
+import org.cytoscape.view.model.DiscreteRange;
 import org.cytoscape.view.model.View;
+import org.cytoscape.view.model.VisualProperty;
 import org.cytoscape.view.presentation.property.ArrowShapeVisualProperty;
 import org.cytoscape.view.presentation.property.BasicVisualLexicon;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.*;
 import org.cytoscape.view.presentation.property.NodeShapeVisualProperty;
+import org.cytoscape.view.presentation.property.values.LineType;
 import org.cytoscape.view.vizmap.VisualMappingFunctionFactory;
 import org.cytoscape.view.vizmap.VisualMappingManager;
 import org.cytoscape.view.vizmap.VisualPropertyDependency;
@@ -122,6 +125,16 @@ public class CyViewUtils {
 			CyEdge edge = ev.getModel();
 			if (net.getRow(edge).get("isRestraint", Boolean.class))
 				ev.setLockedValue(EDGE_VISIBLE, false);
+		}
+	}
+
+	public static void setLineType(View<CyEdge> edgeView, VisualProperty<?> ltVp, String type) {
+		DiscreteRange<LineType> range = (DiscreteRange<LineType>)ltVp.getRange();
+		for (LineType t: range.values()) {
+			if (t.getDisplayName().equals(type)) {
+				edgeView.setLockedValue(ltVp, t);
+				return;
+			}
 		}
 	}
 }
