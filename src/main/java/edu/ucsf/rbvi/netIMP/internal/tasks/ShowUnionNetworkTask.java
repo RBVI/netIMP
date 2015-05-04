@@ -59,6 +59,9 @@ public class ShowUnionNetworkTask extends AbstractTask {
 		style.apply(view);
 		viewManager.addNetworkView(view);
 
+		// Now, hide our Restraint edges
+		CyViewUtils.hideRestraintEdges(view);
+
 		// Apply a layout
 	}
 }

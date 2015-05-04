@@ -92,6 +92,22 @@ public class IMPModel implements Comparable<IMPModel> {
 	public List <IMPNode> getNodes() { return impNodes; }
 	public List <IMPEdge> getEdges() { return impEdges; }
 	public List <IMPRestraint> getRestraints() { return impRestraints; }
+	public List <CyEdge> getRestraintEdges() { 
+		return new ArrayList<>(restraintMap.keySet()); 
+	}
+	public IMPRestraint getRestraint(CyEdge edge) {
+		if (restraintMap.containsKey(edge))
+			return restraintMap.get(edge);
+		return null;
+	}
+	public List <CyEdge> getRestraintEdges(String type) {
+		List <CyEdge> edges = new ArrayList<>();
+		for (CyEdge edge: restraintMap.keySet()) {
+			if (type.equals(restraintMap.get(edge).getType()))
+				edges.add(edge);
+		}
+		return edges;
+	}
 
 	public Color getColor() { return color; }
 	public void setColor(Color color) { this.color = color; }
@@ -126,19 +142,68 @@ public class IMPModel implements Comparable<IMPModel> {
 			nodeMap.put(node, iNode);
 		}
 		// 3) Create our edges
+		CyModelUtils.createColumnIfNecessary(network.getDefaultEdgeTable(), 
+		                                     "isRestraint", Boolean.class, null);
 		for (IMPEdge iEdge: impEdges) {
-			CyNode sourceNode = iEdge.getSourceNode().getNode();
-			CyNode targetNode = iEdge.getTargetNode().getNode();
-			CyEdge edge = network.addEdge(sourceNode, targetNode, false);
+			CyEdge edge = addEdge(network, iEdge, "model");
 			edgeMap.put(edge, iEdge);
-			String edgeName = network.getRow(sourceNode).get(CyNetwork.NAME, String.class) + " (model) "+
-			                  network.getRow(targetNode).get(CyNetwork.NAME, String.class);
-			CyModelUtils.setName(network, edge, edgeName);
+			network.getRow(edge).set("isRestraint", false);
 		}
-		// 4) Add our restraint edges
-		for (IMPRestraint iRestraint: impRestraints) {
-		}
+
 		return network;
+	}
+
+	public List<CyEdge> addRestraints(CyNetwork net) {
+		List<CyEdge> restraintEdges = new ArrayList<>();
+
+		// Create the restraint columns
+		CyModelUtils.createColumnIfNecessary(net.getDefaultEdgeTable(), 
+		                                     "restraint type", String.class, null);
+		CyModelUtils.createColumnIfNecessary(net.getDefaultEdgeTable(), 
+		                                     "score", Double.class, null);
+		CyModelUtils.createColumnIfNecessary(net.getDefaultEdgeTable(), 
+		                                     "directed", Boolean.class, null);
+
+		// ) Add our restraint edges
+		for (IMPRestraint iRestraint: impRestraints) {
+			boolean directed = iRestraint.isDirected();
+			double score = iRestraint.getScore();
+			String type = iRestraint.getType();
+			for (IMPEdge iEdge: iRestraint.getEdges()) {
+				CyEdge edge = addEdge(net, iEdge, "restraint");
+				restraintEdges.add(edge);
+				restraintMap.put(edge, iRestraint);
+				net.getRow(edge).set("restraint type", type);
+				net.getRow(edge).set("isRestraint", true);
+				net.getRow(edge).set("directed", directed);
+				net.getRow(edge).set("score", score);
+			}
+		}
+		return restraintEdges;
+	}
+
+	public void removeRestraints(CyNetwork network) {
+		for (CyEdge edge: network.getEdgeList()) {
+			if (network.getRow(edge).get("isRestraint", Boolean.class)) {
+			}
+		}
+	}
+
+	private CyEdge addEdge(CyNetwork net, IMPEdge iEdge, String type) {
+		CyNode sourceNode = iEdge.getSourceNode().getNode();
+		CyNode targetNode = iEdge.getTargetNode().getNode();
+		// See if we need to match names
+		if (!net.containsNode(sourceNode)) {
+			// Yup
+			sourceNode = CyModelUtils.getNodeByName(net, iEdge.getSourceNode().getNodeLabel());
+			targetNode = CyModelUtils.getNodeByName(net, iEdge.getTargetNode().getNodeLabel());
+		}
+		CyEdge edge = net.addEdge(sourceNode, targetNode, false);
+		String edgeName = net.getRow(sourceNode).get(CyNetwork.NAME, String.class) + " ("+
+		                  type+") "+
+		                  net.getRow(targetNode).get(CyNetwork.NAME, String.class);
+		CyModelUtils.setName(net, edge, edgeName);
+		return edge;
 	}
 
 	@Override

@@ -23,6 +23,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellRenderer;
 
+import org.cytoscape.model.CyEdge;
 import org.cytoscape.model.CyNetwork;
 import org.cytoscape.model.CyNode;
 
@@ -163,8 +164,10 @@ public class NetworkImageRenderer implements TableCellRenderer {
 		}
 
 		if (componentView.getEdgeViews() != null) {
-			for (int i = 0; i < componentView.getEdgeViews().size(); i++) {
-				// Weight edges?
+			for (View<CyEdge> ev: componentView.getEdgeViews()) {
+				if (!net.getRow(ev.getModel()).get("isRestraint", Boolean.class)) {
+					ev.setLockedValue(EDGE_VISIBLE, false);
+				}
 			}
 		}
 

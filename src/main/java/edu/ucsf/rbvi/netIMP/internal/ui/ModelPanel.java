@@ -255,6 +255,8 @@ public class ModelPanel extends JPanel implements CytoPanelComponent {
 			networkView.clearVisualProperties();
 			style.apply(networkView);
 
+			// Hide the restraint edges
+
 			for (int viewRow: rows) {
 				int modelRow = table.convertRowIndexToModel(viewRow);
 				Color modelColor = ((IMPModel)table.getValueAt(modelRow,1)).getColor();
@@ -318,7 +320,6 @@ public class ModelPanel extends JPanel implements CytoPanelComponent {
 			for (int i = 0; i < 11; i++) {
 				int value = ((minScore*100)+(i*increment));
 				String label = formatter.format(((double)value)/100.0);
-				System.out.println("value: "+value+" label: "+label);
 				JLabel jLabel = new JLabel(label); // May have to use a text formatter
 				jLabel.setFont(new Font("SansSerif", Font.BOLD, 8));
 				table.put(value, jLabel);
@@ -337,9 +338,28 @@ public class ModelPanel extends JPanel implements CytoPanelComponent {
 		}
 
 		public void itemStateChanged(ItemEvent e) {
-			JCheckBox cb = (JCheckBox)e.getSource();
+			JCheckBox cb = (JCheckBox)e.getItemSelectable();
 			String restraint = cb.getActionCommand();
+			Color modelColor = model.getColor();
 			System.out.println("Add restraint edges for "+restraint+" on model "+model.getModelNumber());
+			// Unchecked?
+			if (e.getStateChange() == ItemEvent.DESELECTED) {
+				// Hide edges
+				List<CyEdge> edges = model.getRestraintEdges(restraint);
+				for (CyEdge edge: edges)
+					CyViewUtils.showEdge(cyIMPManager, network, edge, false);
+			} else {
+				// Show edges
+				List<CyEdge> edges = model.getRestraintEdges(restraint);
+				for (CyEdge edge: edges) {
+					CyViewUtils.showEdge(cyIMPManager, network, edge, true);
+					// Style it
+					View<CyEdge> edgeView = networkView.getEdgeView(edge);
+					edgeView.setVisualProperty(EDGE_STROKE_UNSELECTED_PAINT, modelColor);
+					// Change the line style depending on whether this restraint is met
+					// or violated
+				}
+			}
 		}
 	}
 }

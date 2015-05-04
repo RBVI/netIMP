@@ -15,7 +15,6 @@ public class IMPRestraint {
 	String restraintType;
 	double score;
 
-
 	public IMPRestraint (List<IMPNode> nodeList, JSONObject model) {
 		restraintEdges = new ArrayList<>();
 
@@ -39,4 +38,26 @@ public class IMPRestraint {
 	public List<CyEdge> getCyEdges() { return restraintCyEdges; }
 	public void setCyEdges(List<CyEdge> cyEdges) { restraintCyEdges = cyEdges; }
 	public void addCyEdge(CyEdge cyEdge) { restraintCyEdges.add(cyEdge); }
+
+	public boolean equals(IMPRestraint restraint) {
+		if (restraint.isDirected() != isDirected())
+			return false;
+		if (!restraint.getType().equals(getType()))
+			return false;
+		if (restraint.getEdges().size() != getEdges().size())
+			return false;
+
+		// These restraints are equal only if all of the edges are equal
+		for (IMPEdge edge: restraintEdges) {
+			String source = edge.getSourceNode().getNodeLabel();
+			String target = edge.getTargetNode().getNodeLabel();
+			for (IMPEdge cEdge: restraint.getEdges()) {
+				if (!source.equals(cEdge.getSourceNode().getNodeLabel()))
+					return false;
+				if (!target.equals(cEdge.getTargetNode().getNodeLabel()))
+					return false;
+			}
+		}
+		return true;
+	}
 }

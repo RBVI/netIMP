@@ -72,6 +72,8 @@ public class ModelRenderer extends AbstractCellEditor implements TableCellRender
 				JLabel label = new JLabel("<html>"+s+": <b>"+strValue+"</b></html>");
 				if (impManager.getCurrentNetwork() != null) {
 					JCheckBox jcb = new JCheckBox();
+					if (s.endsWith(" score"))
+						s = s.substring(0, s.length()-6);
 					jcb.setActionCommand(s);
 					jcb.addItemListener(impManager.getResultsPanel().getItemListener(impModel));
 					jcb.setAlignmentX(Component.LEFT_ALIGNMENT);

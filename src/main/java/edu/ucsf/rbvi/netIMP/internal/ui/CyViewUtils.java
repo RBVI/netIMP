@@ -11,6 +11,7 @@ import org.cytoscape.model.CyTable;
 import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.view.model.CyNetworkViewManager;
 import org.cytoscape.view.model.View;
+import org.cytoscape.view.presentation.property.ArrowShapeVisualProperty;
 import org.cytoscape.view.presentation.property.BasicVisualLexicon;
 import static org.cytoscape.view.presentation.property.BasicVisualLexicon.*;
 import org.cytoscape.view.presentation.property.NodeShapeVisualProperty;
@@ -72,6 +73,20 @@ public class CyViewUtils {
 		colorMapping.putMapValue("metabolite", Color.WHITE);
 		colorMapping.putMapValue("enzyme", new Color(153,255,153));
 		newStyle.addVisualMappingFunction(colorMapping);
+
+		// Discrete mapper for restraints to turn them off by default
+		DiscreteMapping restraintMapping = 
+					(DiscreteMapping) discreteMappingFactory.createVisualMappingFunction("isRestraint", Boolean.class, EDGE_VISIBLE);
+		restraintMapping.putMapValue(true, false);
+		restraintMapping.putMapValue(false, true);
+		newStyle.addVisualMappingFunction(restraintMapping);
+
+		// Discrete mapper for directed restraints 
+		DiscreteMapping restraintArrowMapping = 
+					(DiscreteMapping) discreteMappingFactory.createVisualMappingFunction("directed", Boolean.class, EDGE_TARGET_ARROW_SHAPE);
+		restraintArrowMapping.putMapValue(true, ArrowShapeVisualProperty.ARROW);
+		restraintArrowMapping.putMapValue(false, ArrowShapeVisualProperty.NONE);
+		newStyle.addVisualMappingFunction(restraintArrowMapping);
 	
 		// Continuous mapper for edge thickness
 		int max = manager.getMaxModelCount();
@@ -92,10 +107,21 @@ public class CyViewUtils {
 			View<CyEdge> edgeView = view.getEdgeView(edge);
 			if (show) {
 				edgeView.clearValueLock(EDGE_VISIBLE);
+				edgeView.setLockedValue(EDGE_VISIBLE, show);
 			} else {
+				edgeView.clearValueLock(EDGE_VISIBLE);
 				edgeView.setLockedValue(EDGE_VISIBLE, show);
 			}
 			view.updateView();
+		}
+	}
+
+	public static void hideRestraintEdges(CyNetworkView view) {
+		CyNetwork net = view.getModel();
+		for (View<CyEdge> ev: view.getEdgeViews()) {
+			CyEdge edge = ev.getModel();
+			if (net.getRow(edge).get("isRestraint", Boolean.class))
+				ev.setLockedValue(EDGE_VISIBLE, false);
 		}
 	}
 }

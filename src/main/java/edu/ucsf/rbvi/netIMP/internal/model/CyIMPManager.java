@@ -46,6 +46,7 @@ public class CyIMPManager {
 	CyEventHelper eventHelper = null;
 	File modelFile = null;
 	List<IMPModel> impModels;
+	Map<IMPRestraint, List<Double>> restraintMap;
 	ModelPanel resultsPanel = null;
 	int maxModelCount = 0;
 	CyNetwork unionNetwork = null;
@@ -56,10 +57,12 @@ public class CyIMPManager {
 	public CyIMPManager(CyServiceRegistrar registrar) {
 		this.serviceRegistrar = registrar;
 		impModels = new ArrayList<>();
+		restraintMap = new HashMap<>();
 	}
 
 	public void reset() {
 		impModels = new ArrayList<>();
+		restraintMap = new HashMap<>();
 		unionNetwork = null;
 		resultsPanel = null;
 	}
@@ -86,6 +89,12 @@ public class CyIMPManager {
 					IMPModel impModel = new IMPModel(this, (JSONObject)model);
 					impModel.setModelNumber(modelNumber);
 					impModels.add(impModel);
+					for (IMPRestraint restraint: impModel.getRestraints()) {
+						if (!restraintMap.containsKey(restraint)) {
+							restraintMap.put(restraint, new ArrayList<Double>());
+						}
+						restraintMap.get(restraint).add(restraint.getScore());
+					}
 					modelNumber++;
 				}
 			}
@@ -145,7 +154,11 @@ public class CyIMPManager {
 				unionNetwork.getRow(newEdge).set("ModelCount", Integer.valueOf(1));
 				edgeCount++;
 			}
+
+			// Now add the restraint edges for this model
+			model.addRestraints(unionNetwork);
 		}
+
 		System.out.println("Created: "+edgeCount+" edges");
 		return unionNetwork;
 	}
