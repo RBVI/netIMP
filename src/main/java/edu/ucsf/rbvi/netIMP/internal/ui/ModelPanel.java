@@ -361,7 +361,7 @@ public class ModelPanel extends JPanel implements CytoPanelComponent {
 			}
 		}
 
-		public void getVisualLexicon() {
+		private void getVisualLexicon() {
 			RenderingEngineManager rem = cyIMPManager.getService(RenderingEngineManager.class);
 			for (RenderingEngine<?> re: rem.getRenderingEngines(networkView)) {
 				lexicon = re.getVisualLexicon();
@@ -377,6 +377,7 @@ public class ModelPanel extends JPanel implements CytoPanelComponent {
 			Color modelColor = model.getColor();
 			if (lexicon == null) getVisualLexicon();
 			VisualProperty<?> ltVp = lexicon.lookup(CyEdge.class, "EDGE_LINE_TYPE");
+			VisualProperty<?> targetArrowPaint = lexicon.lookup(CyEdge.class, "EDGE_TARGET_ARROW_UNSELECTED_PAINT");
 			// System.out.println("Add restraint edges for "+restraint+" on model "+model.getModelNumber());
 			// Unchecked?
 			if (e.getStateChange() == ItemEvent.DESELECTED) {
@@ -393,10 +394,15 @@ public class ModelPanel extends JPanel implements CytoPanelComponent {
 					// Style it
 					if (networkView != null) {
 						View<CyEdge> edgeView = networkView.getEdgeView(edge);
-						edgeView.setVisualProperty(EDGE_STROKE_UNSELECTED_PAINT, modelColor);
 						if (isSatisfied) {
+							edgeView.setLockedValue(EDGE_STROKE_UNSELECTED_PAINT, modelColor);
+							edgeView.setLockedValue(targetArrowPaint, modelColor);
+							edgeView.setLockedValue(EDGE_WIDTH, 3.0);
 							CyViewUtils.setLineType(edgeView, ltVp, "Contiguous Arrow");
 						} else {
+							edgeView.setLockedValue(EDGE_STROKE_UNSELECTED_PAINT, Color.RED);
+							edgeView.setLockedValue(targetArrowPaint, Color.RED);
+							edgeView.setLockedValue(EDGE_WIDTH, 3.0);
 							CyViewUtils.setLineType(edgeView, ltVp, "Vertical Slash");
 						}
 					}

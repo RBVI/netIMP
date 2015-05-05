@@ -242,6 +242,16 @@ public class CyIMPManager {
 		return cyAppManager.getCurrentNetworkView();
 	}
 
+	public CyEventHelper getEventHelper() {
+		getTaskServices();
+		return eventHelper;
+	}
+
+	public SynchronousTaskManager getSynchronousTaskManager() {
+		getTaskServices();
+		return taskManager;
+	}
+
 	public <S> S getService(Class<S> serviceClass) {
 		return serviceRegistrar.getService(serviceClass);
 	}

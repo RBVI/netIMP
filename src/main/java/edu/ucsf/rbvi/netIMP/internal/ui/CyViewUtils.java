@@ -98,6 +98,12 @@ public class CyViewUtils {
 		edgeMapping.addPoint(1, new BoundaryRangeValues(1, 1, 1));
 		edgeMapping.addPoint(max, new BoundaryRangeValues(20, 20, 20));
 		newStyle.addVisualMappingFunction(edgeMapping);
+
+		// Finally, set our visual property dependencies
+		for (VisualPropertyDependency<?> vpd: newStyle.getAllVisualPropertyDependencies()) {
+			if (vpd.getIdString().equals("arrowColorMatchesEdge"))
+				vpd.setDependency(true);
+		}
 		vmManager.addVisualStyle(newStyle);
 		vmManager.setCurrentVisualStyle(newStyle);
 		return newStyle;

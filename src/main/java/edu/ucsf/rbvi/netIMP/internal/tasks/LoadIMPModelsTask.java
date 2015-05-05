@@ -3,6 +3,8 @@ package edu.ucsf.rbvi.netIMP.internal.tasks;
 import java.io.File;
 
 import org.cytoscape.model.CyNetworkManager;
+import org.cytoscape.view.vizmap.VisualMappingManager;
+import org.cytoscape.view.vizmap.VisualStyle;
 import org.cytoscape.work.AbstractTask;
 import org.cytoscape.work.ProvidesTitle;
 import org.cytoscape.work.SynchronousTaskManager;
@@ -44,16 +46,26 @@ public class LoadIMPModelsTask extends AbstractTask {
 		int models = impManager.loadIMPModels(impFile);
 		monitor.setStatusMessage("Loaded "+models+" IMP models");
 
-		SynchronousTaskManager tm = (SynchronousTaskManager)impManager.getService(SynchronousTaskManager.class);
+		SynchronousTaskManager tm = impManager.getSynchronousTaskManager();
 
-		// Show the results panel
-		TaskIterator ti = new TaskIterator(new ShowIMPResultsPanelTask(impManager, true));
-		tm.execute(ti);
-		impManager.getResultsPanel().updateData();
+		{
+			// Show the Union Network
+			TaskIterator ti = new TaskIterator(new ShowUnionNetworkTask(impManager));
+			tm.execute(ti);
+			impManager.getEventHelper().flushPayloadEvents();
+		}
 
-		// Show the Union Network
-		ti = new TaskIterator(new ShowUnionNetworkTask(impManager));
-		tm.execute(ti);
+		{
+			// Show the results panel
+			TaskIterator ti = new TaskIterator(new ShowIMPResultsPanelTask(impManager, true));
+			tm.execute(ti);
+			impManager.getResultsPanel().updateData();
+
+			// Need to re-apply the visual style for some reason
+			VisualMappingManager visualManager = impManager.getService(VisualMappingManager.class);
+			VisualStyle style = visualManager.getVisualStyle(impManager.getCurrentNetworkView());
+			style.apply(impManager.getCurrentNetworkView());
+		}
 
 	}
 }

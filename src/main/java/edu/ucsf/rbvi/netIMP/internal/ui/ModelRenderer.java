@@ -35,10 +35,12 @@ public class ModelRenderer extends AbstractCellEditor implements TableCellRender
 	final CyIMPManager impManager;
 	protected final DecimalFormat formatter;
 	IMPModel editorModel = null;
+	Map<IMPModel, JPanel> modelPanelMap;
 
 	public ModelRenderer(final CyIMPManager impManager) {
 		this.impManager = impManager;
 		formatter = new DecimalFormat("0.00");
+		modelPanelMap = new HashMap<>();
 	}
 
 	@Override
@@ -55,6 +57,10 @@ public class ModelRenderer extends AbstractCellEditor implements TableCellRender
 
 		// System.out.println("Rendering model "+impModel.getModelNumber()+" with color "+impModel.getColor());
 		// System.out.println("ModelRow = "+modelRow+", modelColumn="+modelColumn);
+		if (modelPanelMap.containsKey(impModel)) {
+			return (modelPanelMap.get(impModel));
+		}
+
 		JPanel l = new JPanel();
 		l.setLayout(new BoxLayout(l, BoxLayout.PAGE_AXIS));
 		Color background;
@@ -95,6 +101,8 @@ public class ModelRenderer extends AbstractCellEditor implements TableCellRender
 		l.setPreferredSize(new Dimension(150, 100));
 		l.setOpaque(true);
 		l.revalidate();
+		if (impManager.getCurrentNetwork() != null)
+			modelPanelMap.put(impModel, l);
 		return l;
 
 	}
