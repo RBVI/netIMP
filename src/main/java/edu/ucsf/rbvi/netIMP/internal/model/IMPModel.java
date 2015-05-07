@@ -95,11 +95,13 @@ public class IMPModel implements Comparable<IMPModel> {
 	public List <CyEdge> getRestraintEdges() { 
 		return new ArrayList<>(restraintMap.keySet()); 
 	}
+
 	public IMPRestraint getRestraint(CyEdge edge) {
 		if (restraintMap.containsKey(edge))
 			return restraintMap.get(edge);
 		return null;
 	}
+
 	public List <CyEdge> getRestraintEdges(String type) {
 		List <CyEdge> edges = new ArrayList<>();
 		for (CyEdge edge: restraintMap.keySet()) {
@@ -107,6 +109,17 @@ public class IMPModel implements Comparable<IMPModel> {
 				edges.add(edge);
 		}
 		return edges;
+	}
+
+	public double getMaxRestraintScore(String type) {
+		double max = -1.0;
+		for (IMPRestraint restraint: impRestraints) {
+			if (type.equals(restraint.getType())) {
+				if (restraint.getScore() > max)
+					max = restraint.getScore();
+			}
+		}
+		return max;
 	}
 
 	public Color getColor() { return color; }
@@ -183,9 +196,10 @@ public class IMPModel implements Comparable<IMPModel> {
 	}
 
 	public boolean isSatisfied(CyEdge edge) {
+		double maxScore = getMaxRestraintScore("chemical transformation");
 		IMPRestraint restraint = restraintMap.get(edge);
 		if (restraint.getType().equals("chemical transformation") &&
-		    restraint.getScore() < 21.00196)
+		    restraint.getScore() < maxScore)
 			return false;
 		if (restraint.getScore() < 0.0)
 			return false;
