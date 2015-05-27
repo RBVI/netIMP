@@ -24,7 +24,7 @@ public class IMPRestraint {
 		}
 
 		directed = ((Boolean)model.get("directed")).booleanValue();
-		score = ((Double)model.get("score")).doubleValue();
+		score = ((Number)model.get("score")).doubleValue();
 		restraintType = (String)model.get("restraint type");
 
 		restraintCyEdges = new ArrayList<>();
