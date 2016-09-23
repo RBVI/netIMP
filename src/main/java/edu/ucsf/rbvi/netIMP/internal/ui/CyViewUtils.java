@@ -110,10 +110,9 @@ public class CyViewUtils {
 	}
 
 	public static void showEdge(CyIMPManager manager, CyNetwork network, CyEdge edge, boolean show) {
-		CyNetworkViewManager viewManager = 
-					(CyNetworkViewManager)manager.getService(CyNetworkViewManager.class);
-		for (CyNetworkView view: viewManager.getNetworkViews(network)) {
+		for (CyNetworkView view: manager.getNetworkViews(network)) {
 			View<CyEdge> edgeView = view.getEdgeView(edge);
+			if (edgeView == null) continue;
 			if (show) {
 				edgeView.clearValueLock(EDGE_VISIBLE);
 				edgeView.setLockedValue(EDGE_VISIBLE, show);
@@ -121,7 +120,7 @@ public class CyViewUtils {
 				edgeView.clearValueLock(EDGE_VISIBLE);
 				edgeView.setLockedValue(EDGE_VISIBLE, show);
 			}
-			view.updateView();
+			// view.updateView();
 		}
 	}
 
@@ -142,5 +141,16 @@ public class CyViewUtils {
 				return;
 			}
 		}
+	}
+
+	public static boolean isLayedOut(CyIMPManager manager, CyNetwork network) {
+		for (CyNetworkView view: manager.getNetworkViews(network)) {
+			for (View<CyNode> nodeView: view.getNodeViews()) {
+				if (nodeView.getVisualProperty(NODE_X_LOCATION) != 0.0 ||
+				    nodeView.getVisualProperty(NODE_Y_LOCATION) != 0.0)
+					return true;
+			}
+		}
+		return false;
 	}
 }

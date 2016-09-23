@@ -53,8 +53,10 @@ public class ShowIMPResultsPanelTask extends AbstractTask {
 		} else {
 			monitor.setTitle("Hiding IMP results panel");
 			ModelPanel modelPanel = impManager.getResultsPanel();
-			if (modelPanel != null)
+			if (modelPanel != null) {
 				impManager.unregisterService(modelPanel, CytoPanelComponent.class);
+				impManager.setResultsPanel(null);
+			}
 		}
 	}
 }

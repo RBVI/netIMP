@@ -22,6 +22,7 @@ import javax.swing.JWindow;
 import javax.swing.SwingUtilities;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellRenderer;
+import javax.swing.UIManager;
 
 import org.cytoscape.model.CyEdge;
 import org.cytoscape.model.CyNetwork;
@@ -99,6 +100,12 @@ public class NetworkImageRenderer implements TableCellRenderer {
 		l.setOpaque(true);
 		l.setPreferredSize(new Dimension(netIcon.getIconWidth(), netIcon.getIconHeight()));
 		l.revalidate();
+		Color background;
+	 	if (isSelected)
+			background = UIManager.getColor("Table.selectionBackground");
+		else
+			background = UIManager.getColor("Table.background");
+		l.setBackground(background);
 
 		return l;
 	}
@@ -139,6 +146,7 @@ public class NetworkImageRenderer implements TableCellRenderer {
 		componentView.setVisualProperty(NETWORK_WIDTH, new Double(width));
 		componentView.setVisualProperty(NETWORK_HEIGHT, new Double(height));
 
+
 		for (View<CyNode> nv : componentView.getNodeViews()) {
 			// Node position
 			final double x;
@@ -165,13 +173,18 @@ public class NetworkImageRenderer implements TableCellRenderer {
 
 		if (componentView.getEdgeViews() != null) {
 			for (View<CyEdge> ev: componentView.getEdgeViews()) {
-				if (!net.getRow(ev.getModel()).get("isRestraint", Boolean.class)) {
+				if (net.getRow(ev.getModel()).get("isRestraint", Boolean.class)) {
 					ev.setLockedValue(EDGE_VISIBLE, false);
 				}
+				ev.setLockedValue(EDGE_PAINT, nodeColor);
 			}
 		}
 
-		if (layoutNecessary) {
+		// Now, check to see if the unionNetwork exists and if it's layed out
+		CyNetwork unionNetwork = impManager.getUnionNetwork();
+		if (unionNetwork != null && CyViewUtils.isLayedOut(impManager, unionNetwork)) {
+			copyLayout(componentView, impManager.getUnionNetworkView());
+		} else if (layoutNecessary) {
 			if (layouter == null) {
 				layouter = new SpringEmbeddedLayouter();
 			}
@@ -234,14 +247,14 @@ public class NetworkImageRenderer implements TableCellRenderer {
 		if (componentStyle == null) {
 			componentStyle = visualStyleFactory.createVisualStyle("Cluster");
 
-			componentStyle.setDefaultValue(NODE_SIZE, 40.0);
-			componentStyle.setDefaultValue(NODE_WIDTH, 40.0);
-			componentStyle.setDefaultValue(NODE_HEIGHT, 40.0);
+			componentStyle.setDefaultValue(NODE_SIZE, 80.0);
+			componentStyle.setDefaultValue(NODE_WIDTH, 80.0);
+			componentStyle.setDefaultValue(NODE_HEIGHT, 80.0);
 			componentStyle.setDefaultValue(NODE_PAINT, Color.RED);
 			componentStyle.setDefaultValue(NODE_FILL_COLOR, Color.RED);
 			componentStyle.setDefaultValue(NODE_BORDER_WIDTH, 0.0);
 
-			componentStyle.setDefaultValue(EDGE_WIDTH, 5.0);
+			componentStyle.setDefaultValue(EDGE_WIDTH, 20.0);
 			componentStyle.setDefaultValue(EDGE_PAINT, Color.BLUE);
 			componentStyle.setDefaultValue(EDGE_UNSELECTED_PAINT, Color.BLUE);
 			componentStyle.setDefaultValue(EDGE_STROKE_UNSELECTED_PAINT, Color.BLUE);
@@ -257,7 +270,7 @@ public class NetworkImageRenderer implements TableCellRenderer {
 			ContinuousMapping edgeMapping =
 				(ContinuousMapping) vmff.createVisualMappingFunction("Count", Integer.class, EDGE_WIDTH);
 
-			edgeMapping.addPoint(1, new BoundaryRangeValues(1, 1, 1));
+			edgeMapping.addPoint(0, new BoundaryRangeValues(10, 10, 10));
 			edgeMapping.addPoint(10, new BoundaryRangeValues(20, 20, 20));
 			componentStyle.addVisualMappingFunction(edgeMapping);
 		}
@@ -274,6 +287,29 @@ public class NetworkImageRenderer implements TableCellRenderer {
 		view.updateView();
 
 		return view;
+	}
+
+	private void copyLayout(CyNetworkView componentView, CyNetworkView unionView) {
+		Map<String, View<CyNode>> nameViewMap = new HashMap<>();
+		CyNetwork compNetwork = componentView.getModel();
+		CyNetwork unionNetwork = unionView.getModel();
+		for (View<CyNode> nv: componentView.getNodeViews()) {
+			CyNode node = nv.getModel();
+			String name = compNetwork.getRow(node).get(CyNetwork.NAME, String.class);
+			nameViewMap.put(name, nv);
+		}
+
+		for (View<CyNode> nv: unionView.getNodeViews()) {
+			CyNode node = nv.getModel();
+			String name = unionNetwork.getRow(node).get(CyNetwork.NAME, String.class);
+			if (nameViewMap.containsKey(name)) {
+				View<CyNode> toView = nameViewMap.get(name);
+				double x = nv.getVisualProperty(NODE_X_LOCATION);
+				double y = nv.getVisualProperty(NODE_Y_LOCATION);
+				toView.setVisualProperty(NODE_X_LOCATION,x);
+				toView.setVisualProperty(NODE_Y_LOCATION,y);
+			}
+		}
 	}
 }
 

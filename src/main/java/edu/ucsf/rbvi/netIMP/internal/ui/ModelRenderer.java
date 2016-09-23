@@ -50,25 +50,33 @@ public class ModelRenderer extends AbstractCellEditor implements TableCellRender
 		int modelRow = table.convertRowIndexToModel(viewRow);
 		int modelColumn = table.convertColumnIndexToModel(viewColumn);
 
-		// System.out.println("ViewRow = "+viewRow+", ViewColumn="+viewColumn);
+		// System.out.println("ViewRow = "+viewRow+", ViewColumn="+viewColumn+" isSelected="+isSelected);
 		// impModel = (IMPModel) data;
 		IMPModel impModel = (IMPModel)table.getValueAt(viewRow, viewColumn);
 		if (impModel == null) return new JPanel();
 
 		// System.out.println("Rendering model "+impModel.getModelNumber()+" with color "+impModel.getColor());
 		// System.out.println("ModelRow = "+modelRow+", modelColumn="+modelColumn);
+		/*
 		if (modelPanelMap.containsKey(impModel)) {
 			return (modelPanelMap.get(impModel));
 		}
+		*/
 
 		JPanel l = new JPanel();
 		l.setLayout(new BoxLayout(l, BoxLayout.PAGE_AXIS));
 		Color background;
+	 	if (isSelected)
+			background = UIManager.getColor("Table.selectionBackground");
+		else
+			background = UIManager.getColor("Table.background");
+		/*
 		if (viewRow % 2 == 0) {
 			background = UIManager.getColor("Table.background");
 		} else {
 			background = UIManager.getColor("Table.alternateRowColor");
 		}
+		*/
 
 		// Start by showing the summary score (in the appropriate model color)
 		showSummary(impModel, l, background);
@@ -79,6 +87,8 @@ public class ModelRenderer extends AbstractCellEditor implements TableCellRender
 			Double value = impModel.getScores().get(s);
 			String strValue = formatter.format(value);
 			JLabel label = new JLabel("<html>"+s+": <b>"+strValue+"</b></html>");
+			label.setBackground(background);
+			label.setFont(label.getFont().deriveFont(10.0f));
 			if (impManager.getCurrentNetwork() != null) {
 				JCheckBox jcb = new JCheckBox();
 				if (s.endsWith(" score"))
@@ -101,6 +111,7 @@ public class ModelRenderer extends AbstractCellEditor implements TableCellRender
 		l.setPreferredSize(new Dimension(150, 100));
 		l.setOpaque(true);
 		l.revalidate();
+		l.setBackground(background);
 		if (impManager.getCurrentNetwork() != null)
 			modelPanelMap.put(impModel, l);
 		return l;
@@ -127,6 +138,7 @@ public class ModelRenderer extends AbstractCellEditor implements TableCellRender
 		JPanel panel = new JPanel();
 		JLabel label = new JLabel();
 		label.setForeground(modelColor);
+		label.setBackground(background);
 		label.setFont(label.getFont().deriveFont(Font.BOLD));
 		label.setText("Score: "+strValue);
 		label.setAlignmentX(Component.LEFT_ALIGNMENT);

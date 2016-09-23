@@ -206,8 +206,8 @@ public class ModelPanel extends JPanel implements CytoPanelComponent {
 
 			table.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
 			table.setAutoCreateColumnsFromModel(true);
-			table.setIntercellSpacing(new Dimension(0, 4)); // gives a little vertical room between clusters
-			table.setFocusable(false); // removes an outline that appears when the user clicks on the images
+			table.setIntercellSpacing(new Dimension(0, 8)); // gives a little vertical room between clusters
+			table.setFocusable(true); // removes an outline that appears when the user clicks on the images
 			table.setRowHeight(defaultRowHeight);
 
 			// Make the headers centered
@@ -289,7 +289,8 @@ public class ModelPanel extends JPanel implements CytoPanelComponent {
 		}
 
 		public void stateChanged(ChangeEvent e) {
-			if (e.getSource() != slider) return;
+			if (e.getSource() != slider || slider.getValueIsAdjusting()) return;
+
 			int cutoff = slider.getValue();
 			scoreCutOff = ((double)cutoff)/100.0;
 

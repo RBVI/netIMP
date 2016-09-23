@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +29,7 @@ import org.cytoscape.model.CyNode;
 import org.cytoscape.model.SavePolicy;
 import org.cytoscape.service.util.CyServiceRegistrar;
 import org.cytoscape.view.model.CyNetworkView;
+import org.cytoscape.view.model.CyNetworkViewManager;
 import org.cytoscape.work.FinishStatus;
 import org.cytoscape.work.ObservableTask;
 import org.cytoscape.work.SynchronousTaskManager;
@@ -53,6 +55,7 @@ public class CyIMPManager {
 
 	// A couple of useful services that we want to cache
 	CyApplicationManager cyAppManager = null;
+	CyNetworkViewManager viewManager = null;
 
 	public CyIMPManager(CyServiceRegistrar registrar) {
 		this.serviceRegistrar = registrar;
@@ -107,7 +110,8 @@ public class CyIMPManager {
 	}
 
 	public CyNetwork buildUnionNetwork() {
-		unionNetwork = networkFactory.createNetwork(SavePolicy.DO_NOT_SAVE);
+		// unionNetwork = networkFactory.createNetwork(SavePolicy.DO_NOT_SAVE);
+		unionNetwork = networkFactory.createNetwork();
 
 		// For each model, get the network and those nodes and edges to
 		// our union network.  If an edge already exists, increment the edge
@@ -196,6 +200,19 @@ public class CyIMPManager {
 			networkManager.destroyNetwork(unionNetwork);
 	}
 
+	public CyNetwork getUnionNetwork() {
+		return unionNetwork;
+	}
+
+	public CyNetworkView getUnionNetworkView() {
+		if (unionNetwork == null) return null;
+
+		for (CyNetworkView view: getNetworkViews(unionNetwork)) {
+			return view;
+		}
+		return null;
+	}
+
 	public List<IMPModel> getIMPModels() {
 		return impModels;
 	}
@@ -266,6 +283,12 @@ public class CyIMPManager {
 
 	public void unregisterService(Object service, Class<?> serviceClass) {
 		serviceRegistrar.unregisterService(service, serviceClass);
+	}
+
+	public Collection<CyNetworkView> getNetworkViews(CyNetwork network) {
+		if (viewManager == null)
+			viewManager = getService(CyNetworkViewManager.class);
+		return viewManager.getNetworkViews(network);
 	}
 
 	private void getTaskServices() {
