@@ -102,7 +102,7 @@ public class ModelRenderer extends AbstractCellEditor implements TableCellRender
 			}
 
 			p.add(label);
-			p.setPreferredSize(new Dimension(150,20));
+			p.setPreferredSize(new Dimension(150,15));
 			p.setAlignmentX(Component.LEFT_ALIGNMENT);
 			p.setBackground(background);
 			l.add(p);
